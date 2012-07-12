@@ -22,7 +22,7 @@
 
 #include "csr.h"
 
-#define VERSION	"2.2"
+#define VERSION	"3.0"
 #define APPNAME "bt_rng"
 
 // Threading stuff
@@ -166,14 +166,11 @@ void *thread_rand(void *threadarg)
 				printf("String: %s\n",buffer);
 				// Loop through character array, minus terminator
 				for ( bi = 0; bi <= strlen(buffer) - 1; bi++ )
-				{
+				{e
 					/* Range:
 					 *  Zero - 1 to 4
 					 *  One  - 4 to 8
 					 */
-					 
-					printf("%i\n",buffer[bi]);
-
 					if ( buffer[bi] == 49 || buffer[bi] == 52 )
 					{
 						binary[bw] = 48; // Zero
