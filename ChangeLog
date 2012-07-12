@@ -1,0 +1,91 @@
+07/11/12:
+	Fixed buffer overflow
+	Better error reporting for device init problems
+	Fixed int-string conversion
+	Fixed proper memory allocation for binary buffer
+
+06/23/12:
+	Removed TODO
+	Updated Makefile
+
+04/22/10: Released as Version 2.1
+	Minor code and documentation changes to bring in line with other apps
+	Checked to see if running as root (why didn't I think of that before?)
+	Changed error message to show unsupported device
+	Changed "help" text
+
+04/02/10:
+	Fixed argument handling bug which prevented -h from working
+	Minor documentation changes
+
+03/10/10: Released as Version 2.0
+	Completed tests on new algorithm
+	Updated documentation
+
+03/09/10:
+	Adjusted for zero skew
+	Added binary output, made new default
+
+03/03/10:
+	Tests of new algorithm
+	Rewrite README
+
+02/27/10:
+	Fixed compiler warnings from unused functions.
+	Added "verbose" status output (-v)
+
+02/16/10:
+	Added check to see if given iterations can be distributed evenly
+
+02/14/10:
+	Started algorithm rewrite, tested new output mode.
+	Removed itoa from Lukás Chmela, dropped back down to GPLv2
+
+12/13/09: Released as Version 1.1
+	Added TODO
+	Fixed a few wrong exit codes
+	Changed default behavior to show help screen
+
+11/17/09:
+	Removed unused code
+
+11/12/09:
+	Minor documentation changes
+
+11/07/09: Released as Version 1.0
+	Updated Makefile
+	Minor bug fixes
+	In mode 3, threads will now output how many digits they tossed out.
+
+11/05/09:
+	Removed all original functions from bccmd not used in bt_rng. Reduced
+	binary size from 76K to 16K.
+	Fixed file access glitch.
+	Initial tests on PPC. Compiles, but behaves strangely. Investigating.
+
+11/04/09:
+	Changed iteration counter to unsigned long, to prevent overflow on
+	long runs.
+
+11/02/09:
+	Added weighted binary output mode to take into account bias in CSR
+	PRNG. High quality numbers, very slow.
+	Added counter to record number of discarded bits.
+
+11/01/09:
+	Fixed bug where bt_rng would end unexpectedly if time difference
+	between threads was too high. Allows for runs past 2 million
+	iterations.
+	
+10/31/09:
+	Increased maximum threads to 4 (unstable, but works).
+	Added true binary output mode through C version of itoa by Lukás
+	Chmela.
+
+10/30/09:
+	First multithreaded version. Supports 2 threads.
+	Many bug fixes and cleanup.
+	Added interpreted binary output mode.
+	
+10/28/09:
+	First test. Modified bccmd to loop cmd_rand

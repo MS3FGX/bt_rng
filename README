@@ -1,0 +1,139 @@
+================================================================================
+=                     bt_rng - Experimental Bluetooth PRNG                     =
+=                       Tom Nardi (MS3FGX@gmail.com)                           =
+================================================================================
+
+bt_rng is a program designed to test the validity of random numbers generated
+with the PRNG present in Bluetooth adapters using the Cambridge Silicon Radio
+chipset. It is in no way guaranteed to be stable, and the numbers it generates
+are certainly not guaranteed to be good enough for use in any serious capacity.
+That said, it is an interesting experiment to see what sort of random numbers
+can be generated from very cheap ($3 shipped, from some retailers) hardware
+that is less susceptible to outside influences than some other forms of PRNGs.
+
+bt_rng is based heavily on bccmd, written for BlueZ by Marcel Holtmann.
+
+--------------------------------------------------------------------------------
+- bt_rng 1.x vs bt_rng 2.x                                                     -
+--------------------------------------------------------------------------------
+
+This is the first version of the bt_rng 2.x series. This new series is a large
+improvement over the original versions in terms of efficiency and throughput.
+It takes into account suggestions made by various people after bt_rng made
+HackaDay.com and got itself a little exposure.
+
+Perhaps most notably I got a lot of very excellent information and advice from
+Simon Cooper, the co-creator of LavaRND. I would like to thank him for his
+input and guidance with this project.
+
+--------------------------------------------------------------------------------
+- Requirements                                                                 -
+--------------------------------------------------------------------------------
+
+bt_rng obviously requires both a suitable CSR based Bluetooth adapter. Anything
+with the CSR chipset should work, though in my testing I found a few adapters
+that simply didn't return numbers when queried by the software. I have tested
+with both cheap adapters bought online for a few dollars to the AIRcable Host
+XR industrial Bluetooth adapter. Performance is the same with any adapter, as
+long as it is able to output random numbers it will do so just as fast (or
+slow) as any other.
+
+I would be very interested in hearing from anyone who got bt_rng up and running
+on their own hardware. I would like to make some type of rough compatibility
+list of devices that are known (or at least are likely) to work.
+
+Naturally you must also have the Linux Bluetooth API, BlueZ installed. bt_rng
+is known to work on BlueZ 3.36 and 4.56 (presumably everything in between as
+well). It has been tested extensively on those two versions.
+
+--------------------------------------------------------------------------------
+- Installation                                                                 -
+--------------------------------------------------------------------------------
+
+To install bt_rng, simply run the command "make" in this directory. If you get
+any message about missing libraries, use your distribution's package manager to
+install them.
+
+On Debian-like systems make sure you install the BlueZ development libraries,
+not just BlueZ itself.
+
+--------------------------------------------------------------------------------
+- Performance                                                                  -
+--------------------------------------------------------------------------------
+
+Due to the nature of the polling process, generation of numbers using this
+method is exceedingly slow. Generation can be as slow as 100 bytes per second
+using a single adapter on a ~1 GHz machine.
+
+To address this issue, bt_rng is capable of breaking off into up to 4 threads,
+each with it's own dedicated adapter. Unfortunately, performance suffers due to
+errors in the number generation once there are too many concurrent requests.
+bt_rng can automatically correct for these deviations gracefully (usually), but
+it involves throttling back the process and requesting a new number up to 6
+times. This means that overall the speed with multiple adapters on a single
+machine can be hindered significantly. These errors get more frequent as the
+number adapters increase, so while bt_rng is capable of running with up to 4
+devices, using more than 2 at a time is not recommended.
+
+For this reason, it is strongly suggested to run bt_rng on a cluster if at all
+possible. By sharing out the bt_rng binary on an NFS export, multiple machines
+can execute the binary and write to the same "output.txt" file simultaneously.
+Not only will 2 nodes running 2 threads each be faster than one node running 4,
+the interleaving effect of the two machines writing to the same file at the
+same time should help counteract bias in any one particular adapter.
+
+Note:
+Some recent testing on my machines seems to indicate that reliability with
+multiple adapters increases if the adapters are on different USB controllers.
+In other words, rather than plugging 4 Bluetooth USB adapters into a single
+USB card, try plugging 2 into the card and 2 into the motherboard's USB
+controller.
+
+--------------------------------------------------------------------------------
+- Usage                                                                        -
+--------------------------------------------------------------------------------
+
+Using bt_rng is simple. First, you need to be root. Sorry, but this is the way
+BlueZ works, there isn't anything I can do about it.
+
+Beyond that, bt_rng has a few options you should be aware of:
+
+-i <iterations>
+    This controls how many iterations, or loops, that bt_rng will run. Keep in
+mind this doesn't mean it will generate that number of random digits. The
+adapter returns numbers of various lengths, and depending on which output
+format you select the resulting number of digits might be much higher, or much
+lower, than the iteration count.
+
+-t <threads>
+    This is the number of threads bt_rng should break into. Each thread must
+have it's own Bluetooth adapter. Thread 0 will use hci0, thread 1 will use
+hci1, etc, etc. bt_rng supports up to 4 threads, but for stability reasons it
+is not recommended to run more than 2 threads if at all possible.
+
+-o <filename>
+    This tells bt_rng to use a different filename than the default output.txt
+
+-m <mode>
+    Changes output mode between integer and binary, default is binary.
+-v
+    Enables verbose output mode, which prints a status message for each thread
+every 10,000 iterations. This works out to be around every 2.5 minutes, which
+seems sane enough for large runs. Obviously this option will do nothing if the
+number of iterations is not set higher than 10,000. Default is disabled.
+
+-------------------------------------------------------------------------------
+- License                                                                      -
+--------------------------------------------------------------------------------
+
+bt_rng is licensed under the GNU General Public License Version 2. You are
+free to use and distribute this program however you wish, so long as I am
+credited and any changes to the code are made public.
+
+For details, see the file "COPYING" in the source directory.
+
+--------------------------------------------------------------------------------
+- More Info                                                                    -
+--------------------------------------------------------------------------------
+
+For more information and updates, please see www.digifail.com
