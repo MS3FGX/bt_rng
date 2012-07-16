@@ -1,3 +1,6 @@
+07/16/12:
+	Fixed ranges in binary output mode, increased efficiency
+
 07/11/12:
 	Fixed buffer overflow
 	Better error reporting for device init problems

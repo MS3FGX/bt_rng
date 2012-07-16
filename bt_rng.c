@@ -1,5 +1,5 @@
 /*
- *  bt_rng - Hardware PRNG using commodity Bluetooth adapters
+ *  bt_rng - PRNG using commodity Bluetooth adapters
  * 
  *  This is an experimental program designed to generate a large number of
  *  random numbers from the PRNG included in CSR-based Bluetooth devices. It is
@@ -163,26 +163,25 @@ void *thread_rand(void *threadarg)
 				memset(binary, 0, sizeof(binary));
 				bw = 0;
 		
-				printf("String: %s\n",buffer);
 				// Loop through character array, minus terminator
 				for ( bi = 0; bi <= strlen(buffer) - 1; bi++ )
-				{e
+				{
 					/* Range:
-					 *  Zero - 1 to 4
-					 *  One  - 4 to 8
+					 *  Zero - 0 to 4
+					 *  One  - 5 to 9
 					 */
-					if ( buffer[bi] == 49 || buffer[bi] == 52 )
+					if ( (buffer[bi] >= 48) && (buffer[bi] <= 52) )
 					{
 						binary[bw] = 48; // Zero
 						bw++;
 					}
-					else if ( buffer[bi] == 53 || buffer[bi] == 56 )
+					else if ( (buffer[bi] >= 53) && (buffer[bi] <= 57) )
 					{
 						binary[bw] = 49; // One
 						bw++;
 					}
 					else
-						tossed++; // Morbid curiosity I guess...
+						printf("Bad num: %i\n",buffer[bi]);
 				}
 				// Output to file, if there is anything there anyway
 				if ( strlen(binary) >= 1 )
