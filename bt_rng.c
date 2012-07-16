@@ -226,7 +226,7 @@ static void help(void)
 		"\t-i <iterations>    Number of iterations to perform\n"
 		"\t-t <threads>       Number of threads to run, up to 4\n"
 		"\t-o <filename>      Sets output filename, default is output.txt\n"
-		"\t-m <mode>          Sets output mode, default is integer\n"
+		"\t-m <mode>          Sets output mode, default is binary\n"
 		"\t-v                 Enables verbose output, default is disabled\n"
 		"\n");
 }

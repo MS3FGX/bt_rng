@@ -1,5 +1,6 @@
 07/16/12:
 	Fixed ranges in binary output mode, increased efficiency
+	"Help" output fixes
 
 07/11/12:
 	Fixed buffer overflow
