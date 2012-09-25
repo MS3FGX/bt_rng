@@ -55,7 +55,7 @@ int csr_open_hci(char *device)
 	if (ver.manufacturer != 10) {
 		fprintf(stderr, "Unsupported manufacturer\n");
 		hci_close_dev(dd);
-		return -1;
+		return -2;
 	}
 
 	return 0;

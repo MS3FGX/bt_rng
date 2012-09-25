@@ -110,6 +110,8 @@ void *thread_rand(void *threadarg)
 		// Read from device, capture return value to detect errors
 		err = csr_read_hci(CSR_VARID_RAND, array, 8);
 		
+		printf("Error: %i\n",err);
+		
 		// Put data into simple integer
 		randnum = array[0] | (array[1] << 8);
 		if ( (err == -1) || (randnum == 0) )
