@@ -93,14 +93,10 @@ void *thread_rand(void *threadarg)
 	unsigned long tossed = 0;
 	
 	// Init device
-	printf("Initalizing device: %s on thread %i...", device, thread_id);
 	if (csr_open_hci(device) < 0)
-	{
-		// Failure to open device, probably doesn't exist.
-		printf("Failed to open device!\n");
-		exit(1);
-	}
-	printf("OK\n");
+		exit(1); // TODO: Proper shutdown
+
+	printf("Initialized device: %s on thread %i.", device, thread_id);
 	
 	// Define array
 	memset(array, 0, sizeof(array));
@@ -109,8 +105,6 @@ void *thread_rand(void *threadarg)
 	{			
 		// Read from device, capture return value to detect errors
 		err = csr_read_hci(CSR_VARID_RAND, array, 8);
-		
-		printf("Error: %i\n",err);
 		
 		// Put data into simple integer
 		randnum = array[0] | (array[1] << 8);

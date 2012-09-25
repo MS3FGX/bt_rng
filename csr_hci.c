@@ -53,7 +53,8 @@ int csr_open_hci(char *device)
 	}
 
 	if (ver.manufacturer != 10) {
-		fprintf(stderr, "Unsupported manufacturer\n");
+		fprintf(stderr, "Bluetooth device uses unsupported chipset!\n");
+		fprintf(stderr, "bt_rng requires a device based on the CSR chipset to function.\n");
 		hci_close_dev(dd);
 		return -2;
 	}
