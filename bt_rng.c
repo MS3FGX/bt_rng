@@ -14,7 +14,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <syslog.h>
+#include <signal.h>
 #include <pthread.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <bluetooth/bluetooth.h>
 #include <bluetooth/hci.h>
@@ -25,9 +29,9 @@
 #define VERSION	"3.0"
 #define APPNAME "bt_rng"
 
-// Threading stuff
 // Maximum of 4 threads
 #define MAX_THREADS	4
+#define PID_FILE "/tmp/bt_rng.pid"
 
 // Data to pass to threads
 struct thread_data
@@ -36,6 +40,7 @@ struct thread_data
 	unsigned long iterations;
 	int mode;
 	int verbose;
+	int daemon;
 	char *device;
 	FILE *outfile;
 };
@@ -60,7 +65,7 @@ static void badnum(int thread_id, unsigned long iteration)
 void *thread_rand(void *threadarg)
 {
 	// Define variables from struct
-	int thread_id, mode, verbose;
+	int thread_id, mode, verbose, daemon;
 	unsigned long iterations;
 	char *device;
 	FILE *outfile;
@@ -74,6 +79,7 @@ void *thread_rand(void *threadarg)
 	outfile = local_data->outfile;
 	mode = local_data->mode;
 	verbose = local_data->verbose;
+	daemon = local_data->daemon;
 	
 	// Define other variables
 	uint8_t array[8];
@@ -96,7 +102,11 @@ void *thread_rand(void *threadarg)
 	if (csr_open_hci(device) < 0)
 		exit(1); // TODO: Proper shutdown
 
-	printf("Initialized device: %s on thread %i.", device, thread_id);
+	// Show we've started HW on console and syslog
+	if (daemon)
+		syslog(LOG_INFO,"Initialized device: %s on thread %i.", device, thread_id);
+	else
+		printf("Initialized device: %s on thread %i.", device, thread_id);
 	
 	// Define array
 	memset(array, 0, sizeof(array));
@@ -127,9 +137,8 @@ void *thread_rand(void *threadarg)
 				usleep(2000);
 				csr_read_hci(CSR_VARID_RAND, array, 8);
 				randnum = array[0] | (array[1] << 8);
-				printf(
-				"Thread %i autocorrection, attempt %i: Old: %i, New: %i\n",
-				thread_id, r, lastrandnum, randnum);
+				if (verbose)
+					printf("Thread %i autocorrection, attempt %i: Old: %i, New: %i\n", thread_id, r, lastrandnum, randnum);
 				if (randnum != lastrandnum)
 					break;
 			}
@@ -140,9 +149,7 @@ void *thread_rand(void *threadarg)
 		{
 				// Some other error has occured, print report and exit
 				fprintf(stderr, "Error on thread %i!\n", thread_id);
-				fprintf(stderr,
-					"Iteration: %lu of %lu, Device: %s, Rand: %i, Error: %i\n",
-					i, iterations, device, randnum, err);
+				fprintf(stderr, "Iteration: %lu of %lu, Device: %s, Rand: %i, Error: %i\n", i, iterations, device, randnum, err);
 				exit(1);
 		}
 		
@@ -192,13 +199,95 @@ void *thread_rand(void *threadarg)
 				tossed++;
 		
 		// Print progress every 10,000 iterations
-		if ( ( i % 10000 == 0 ) && ( verbose == 1 ) )
-			printf("Thread %i completed %lu of %lu iterations\n",
-				thread_id, i, iterations);
+		if ((i % 10000 == 0) && (verbose == 1))
+		{
+			if (daemon)
+				syslog(LOG_INFO,"Thread %i completed %lu of %lu iterations\n", thread_id, i, iterations);
+			else
+				printf("Thread %i completed %lu of %lu iterations\n", thread_id, i, iterations);
+		}
 	}
-	printf("Thread %i tossed %lu numbers\n", thread_id, tossed);
-	printf("Thread %i done.\n", thread_id);
+	if (daemon)
+		syslog(LOG_INFO,"Thread %i done.\n", thread_id);
+	else
+	{
+		if (verbose)
+			printf("Thread %i tossed %lu numbers\n", thread_id, tossed);
+		
+		printf("Thread %i done.\n", thread_id);
+	}
 	pthread_exit(NULL);
+}
+
+// Daemon/PID functions from Bluelog
+int read_pid (void)
+{
+	// Any error will return 0
+	FILE *pid_file;
+	int pid;
+
+	if (!(pid_file=fopen(PID_FILE,"r")))
+		return 0;
+		
+	if (fscanf(pid_file,"%d", &pid) < 0)
+		pid = 0;
+
+	fclose(pid_file);	
+	return pid;
+}
+
+static void write_pid (pid_t pid)
+{
+	FILE *pid_file;
+	
+	// Open PID file
+	printf("Writing PID file: %s...", PID_FILE);
+	if ((pid_file = fopen(PID_FILE,"w")) == NULL)
+	{
+		printf("\n");
+		printf("Error opening PID file!\n");
+		exit(1);
+	}
+	printf("OK\n");
+	
+	// If open, write PID and close	
+	fprintf(pid_file,"%d\n", pid);
+	fclose(pid_file);
+}
+
+static void daemonize (void)
+{
+	// Process and Session ID
+	pid_t pid, sid;
+	
+	// Fork off process
+	pid = fork();
+	if (pid < 0)
+		exit(EXIT_FAILURE);
+	else if (pid > 0)
+		exit(EXIT_SUCCESS);
+			
+	// Change umask
+	umask(0);
+ 
+	// Create a new SID for the child process
+	sid = setsid();
+	if (sid < 0)
+		exit(EXIT_FAILURE);
+
+	// Change current working directory
+	if ((chdir("/")) < 0)
+		exit(EXIT_FAILURE);
+		
+	// Write PID file
+	write_pid(sid);
+	
+	printf("Going into background...\n");
+		
+	// Close file descriptors
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
 }
 
 static void help(void)
@@ -223,6 +312,8 @@ static void help(void)
 		"\t-t <threads>       Number of threads to run, up to 4\n"
 		"\t-o <filename>      Sets output filename, default is output.txt\n"
 		"\t-m <mode>          Sets output mode, default is binary\n"
+		"\t-d                 Run bt_rng in background as daemon\n"
+		"\t-k                 Kill running bt_rng process\n"
 		"\t-v                 Enables verbose output, default is disabled\n"
 		"\n");
 }
@@ -233,6 +324,8 @@ static struct option main_options[] = {
 	{ "output",	1, 0, 'o' },
 	{ "mode", 1, 0, 'm' },
 	{ "verbose", 0, 0, 'v' },
+	{ "kill", 0, 0, 'k' },
+	{ "daemonize", 0, 0, 'd' },
 	{ "help", 0, 0, 'h' },
 	{ 0, 0, 0, 0 }
 };
@@ -260,11 +353,15 @@ int main(int argc, char *argv[])
 	// Default number of iterations
 	unsigned long iterations = 1;
 	
-	// Default mode and verbosity
+	// Process ID read from PID file
+	int ext_pid;		
+		
+	// Default settings
 	int mode = 0;
 	int verbose = 0;
+	int daemon = 0;
 	
-	while ((opt=getopt_long(argc,argv,"+t:i:o:m:vh", main_options, NULL)) != EOF)
+	while ((opt=getopt_long(argc,argv,"+t:i:o:m:vhkd", main_options, NULL)) != EOF)
 	{
 		switch (opt)
 		{
@@ -297,14 +394,47 @@ int main(int argc, char *argv[])
 			break;
 		case 'v':
 			verbose = 1;
+			break;	
+		case 'd':
+			daemon = 1;
 			break;
+		case 'k':
+			// Read PID from file into variable
+			ext_pid = read_pid();
+			if (ext_pid != 0)
+			{
+				printf("Killing bt_rng process with PID %i...",ext_pid);
+				if(kill(ext_pid,15) != 0)
+				{
+					printf("ERROR!\n");
+					printf("Unable to kill bt_rng process. Check permissions.\n");
+					exit(1);
+				}
+				else
+					printf("OK.\n");
+				
+				// Delete PID file
+				unlink(PID_FILE);
+			}
+			else
+				printf("No running bt_rng process found.\n");
+				
+			exit(0);
 		case 'h':
 			help();
-			exit(0);
+			exit(0);	
 		default:
 			printf("Unknown option. Use -h for help, or see README.\n");
 			exit(1);
 		}
+	}
+	
+	// See if there is already a process running
+	if (read_pid() != 0)
+	{
+		printf("Another instance of bt_rng is already running!\n");
+		printf("Use the -k option to kill a running bt_rng process.\n");
+		exit(1);
 	}
 
 	// If no argument given, show help and exit with error
@@ -357,6 +487,10 @@ int main(int argc, char *argv[])
 			break;
 	}
 	
+	// Daemon switch
+	if (daemon)
+		daemonize();
+	
 	for( t = 0; t < numthreads; t++ )
 	{
 		// Thread ID number
@@ -373,6 +507,7 @@ int main(int argc, char *argv[])
 		thread_data_array[t].outfile = outfile;
 		thread_data_array[t].mode = mode;
 		thread_data_array[t].verbose = verbose;
+		thread_data_array[t].daemon = daemon;
 		
 		// Start thread
 		pthread_create(&threads[t], NULL, thread_rand, (void *)
@@ -384,10 +519,17 @@ int main(int argc, char *argv[])
 		pthread_join(threads[t], NULL);
 			
 	// Close files
-	printf("Closing files...\n");
+	if (!daemon)
+		printf("Closing files...\n");
+		
+	unlink(PID_FILE);
 	fclose(outfile);
 	csr_close_hci();
 	
-	printf("Main Done.\n");
+	if (daemon)
+		syslog(LOG_INFO,"Main thread done.\n");
+	else
+		printf("Main thread done.\n");
+		
 	exit(0);
 }
