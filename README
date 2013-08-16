@@ -71,8 +71,18 @@ is not recommended to run more than 2 threads if at all possible.
 -o <filename>
     This tells bt_rng to use a different filename than the default output.txt
 
--m <mode>
-    Changes output mode between integer and binary, default is binary.
+-n 
+    By default, bt_rng interprets the digits coming out of the Bluetooth device
+as a string of 0's and 1's. When using this option, bt_rng will instead record
+the random number as given from the hardware with no interpretation.
+
+-d
+    This enables daemon mode, allowing bt_rng to run in the background. Status
+info will be written to syslog when daemon mode is active.
+
+-k
+    Use this option to kill an already running instance of bt_rng.
+
 -v
     Enables verbose output mode, which prints a status message for each thread
 every 10,000 iterations. This works out to be around every 2.5 minutes, which
