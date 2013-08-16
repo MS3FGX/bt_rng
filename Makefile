@@ -1,6 +1,6 @@
 # App info
 APPNAME = bt_rng
-VERSION = 2.2
+VERSION = 3.1
 
 # Compiler and options
 CC = gcc -g

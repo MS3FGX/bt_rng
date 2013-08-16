@@ -26,7 +26,7 @@
 
 #include "csr.h"
 
-#define VERSION	"3.0"
+#define VERSION	"3.1"
 #define APPNAME "bt_rng"
 
 // Maximum of 4 threads
