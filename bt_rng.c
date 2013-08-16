@@ -104,9 +104,9 @@ void *thread_rand(void *threadarg)
 
 	// Show we've started HW on console and syslog
 	if (daemon)
-		syslog(LOG_INFO,"Initialized device: %s on thread %i.", device, thread_id);
+		syslog(LOG_INFO,"Initialized device: %s on thread %i.\n", device, thread_id);
 	else
-		printf("Initialized device: %s on thread %i.", device, thread_id);
+		printf("Initialized device: %s on thread %i.\n", device, thread_id);
 	
 	// Define array
 	memset(array, 0, sizeof(array));
@@ -311,18 +311,18 @@ static void help(void)
 		"\t-i <iterations>    Number of iterations to perform\n"
 		"\t-t <threads>       Number of threads to run, up to 4\n"
 		"\t-o <filename>      Sets output filename, default is output.txt\n"
-		"\t-m <mode>          Sets output mode, default is binary\n"
+		"\t-v                 Enables verbose output, default is disabled\n"		
+		"\t-n                 Use unprocessed random number as given by hardware\n"
 		"\t-d                 Run bt_rng in background as daemon\n"
 		"\t-k                 Kill running bt_rng process\n"
-		"\t-v                 Enables verbose output, default is disabled\n"
 		"\n");
 }
 
 static struct option main_options[] = {
 	{ "iterations", 1, 0, 'i' },
-	{ "threads",	1, 0, 't' },
+	{ "threads", 1, 0, 't' },
 	{ "output",	1, 0, 'o' },
-	{ "mode", 1, 0, 'm' },
+	{ "mode", 1, 0, 'n' },
 	{ "verbose", 0, 0, 'v' },
 	{ "kill", 0, 0, 'k' },
 	{ "daemonize", 0, 0, 'd' },
@@ -361,20 +361,15 @@ int main(int argc, char *argv[])
 	int verbose = 0;
 	int daemon = 0;
 	
-	while ((opt=getopt_long(argc,argv,"+t:i:o:m:vhkd", main_options, NULL)) != EOF)
+	while ((opt=getopt_long(argc,argv,"+t:i:o:nvhkd", main_options, NULL)) != EOF)
 	{
 		switch (opt)
 		{
 		case 'o':
 			outfilename = strdup(optarg);
 			break;
-		case 'm':
-			mode = atoi(optarg);
-			if ( mode > 1 || mode < 0 )
-			{
-				printf("Invalid mode. See README.\n");
-				exit(1);
-			}
+		case 'n':
+			mode = 1;
 			break;
 		case 'i':
 			iterations = atoi(optarg);
